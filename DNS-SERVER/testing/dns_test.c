@@ -11,7 +11,7 @@
 
 //Function Declarations need to go to h file
 void dnsQuery(unsigned char*);
-void ChangetoDnsNameFormat(unsigned char*, unsigned char*);
+void string2_dns_format(unsigned char*, unsigned char*);
 unsigned char* ReadName(unsigned char*, unsigned char*, int*);
 
 
@@ -147,7 +147,7 @@ void dnsQuery(unsigned char *host)
 	qname = (unsigned char*)&buf[sizeof(struct DNS_HEADER)];
 	
 	//this will convert www.google.com to 3www6google3com ;
-	ChangetoDnsNameFormat(qname, host);
+	string2_dns_format(qname, host);
 
 	qinfo = (struct QUESTION*)&buf[sizeof(struct DNS_HEADER) + (strlen((const char*)qname) + 1)]; //fill it
 
@@ -218,7 +218,8 @@ void dnsQuery(unsigned char *host)
 
 		
 	}
-	else if( dns->rcode == 1)
+	//Stas: Elad, please check the correct format for printing.
+	else if(dns->rcode == 1)
 	printf("\nFormat Erorr, try again!");
 	else if (dns->rcode == 2)
 	printf("\nName Server Erorr, try again!");
@@ -244,6 +245,7 @@ unsigned char* ReadName(unsigned char* reader, unsigned char* buffer, int* count
 	name[0] = '\0';
 
 	//read the names in 3www6google3com format
+	//Stas: I dont like this imlemetation, need to create an elegant funtion if have time.
 	while (*reader != 0)
 	{
 		if (*reader >= 192)
@@ -269,6 +271,7 @@ unsigned char* ReadName(unsigned char* reader, unsigned char* buffer, int* count
 	}
 
 	//now convert 3www6google3com0 to www.google.com
+	//Stas: I dont like this imlemetation, need to create an elegant funtion if have time.
 	for (i = 0; i < (int)strlen((const char*)name); i++)
 	{
 		p = name[i];
@@ -285,72 +288,8 @@ unsigned char* ReadName(unsigned char* reader, unsigned char* buffer, int* count
 	return name;
 }
 
-//Retrieve the DNS servers from the registry
-/*
-void RetrieveDnsServersFromRegistry()
-{
-	HKEY hkey = 0;
-	char name[256];
-
-	char *path = "SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\\Interfaces";
-
-	char *fullpath[256];
-	unsigned long s = sizeof(name);
-	int dns_count = 0, err, i, j;
-	HKEY inter;
-	unsigned long count;
-
-	//Open the registry folder
-	RegOpenKeyEx(HKEY_LOCAL_MACHINE, path, 0, KEY_READ, &hkey);
-
-	//how many interfaces
-	RegQueryInfoKey(hkey, 0, 0, 0, &count, 0, 0, 0, 0, 0, 0, 0);
-
-	for (i = 0; i < count; i++)
-	{
-		s = 256;
-		//Get the interface subkey name
-		RegEnumKeyEx(hkey, i, (char*)name, &s, 0, 0, 0, 0);
-
-		//Make the full path
-		strcpy((char*)fullpath, path);
-		strcat((char*)fullpath, "\\");
-		strcat((char*)fullpath, name);
-
-		//Open the full path name
-		RegOpenKeyEx(HKEY_LOCAL_MACHINE, (const char*)fullpath, 0, KEY_READ, &inter);
-
-		//Extract the value in Nameserver field
-		s = 256;
-		err = RegQueryValueEx(inter, "NameServer", 0, 0, (unsigned char*)name, &s);
-
-		if (err == ERROR_SUCCESS && strlen(name) > 0)
-		{
-			strcpy(dns_servers[dns_count++], name);
-		}
-	}
-
-	for (i = 0; i < dns_count; i++)
-	{
-		for (j = 0; j < strlen(dns_servers[i]); j++)
-		{
-			if (dns_servers[i][j] == ',' || dns_servers[i][j] == ' ')
-			{
-				strcpy(dns_servers[dns_count++], dns_servers[i] + j + 1);
-				dns_servers[i][j] = 0;
-			}
-		}
-	}
-
-	printf("\nThe following DNS Servers were found on your system...");
-	for (i = 0; i < dns_count; i++)
-	{
-		printf("\n%d) %s", i + 1, dns_servers[i]);
-	}
-}
-*/
 //this will convert www.google.com to 3www6google3com ;
-void ChangetoDnsNameFormat(unsigned char* dns, unsigned char* host)
+void string2_dns_format(unsigned char* dns, unsigned char* host)
 {
 	int lock = 0, i;
 
@@ -365,9 +304,9 @@ void ChangetoDnsNameFormat(unsigned char* dns, unsigned char* host)
 			{
 				*dns++ = host[lock];
 			}
-			lock++; //or lock=i+1;
+			lock++; 
 		}
 	}
 	*dns++ = '\0';
-//	printf("\ndns: %s host: %s\n", dns, host);
+
 }
