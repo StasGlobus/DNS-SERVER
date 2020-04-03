@@ -1,6 +1,4 @@
-//DNS Query Program
-//Dated : 26/2/2007
-
+//Stas the Header Should be split to the H FILE
 //Header Files
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 #define _CRT_SECURE_NO_WARNINGS
@@ -8,30 +6,17 @@
 #include "windows.h"
 #include "stdio.h"
 #include "conio.h"
-
-
 #pragma comment(lib,"ws2_32.lib") //Winsock Library
 
-//List of DNS Servers registered on the system
-//char dns_servers[10][100]; // not needed
 
-//Type field of Query and Answer
-#define T_A 1 /* host address */
-#define T_NS 2 /* authoritative server */
-#define T_CNAME 5 /* canonical name */
-#define T_SOA 6 /* start of authority zone */
-#define T_PTR 12 /* domain name pointer */
-#define T_MX 15 /* mail routing information */
-
-//Function Declarations
+//Function Declarations need to go to h file
 void dnsQuery(unsigned char*);
 void ChangetoDnsNameFormat(unsigned char*, unsigned char*);
 unsigned char* ReadName(unsigned char*, unsigned char*, int*);
-//void RetrieveDnsServersFromRegistry(void);
-//unsigned char* PrepareDnsQueryPacket(unsigned char*);
+
 
 //DNS header structure
-//stas: "x: number" format is saying how many bits the field holds.
+//stas: "x: number" format is saying how many bits the field holds. need to go to h file
 struct DNS_HEADER
 {
 	unsigned short id; // identification number
@@ -55,15 +40,15 @@ struct DNS_HEADER
 };
 
 
-//Constant sized fields of query structure
+//Stas: Constant sized fields of query structure, need to go to h file
 struct QUESTION
 {
 	unsigned short qtype;
 	unsigned short qclass;
 };
 
-//Constant sized fields of the resource record structure
-#pragma pack(push, 1)
+//Stas: Constant sized fields of the resource record structure, need to go to h file.
+#pragma pack(push, 1) // Stas: not sure where this line came from, need to check what it does?!
 struct R_DATA
 {
 	unsigned short type;
@@ -73,7 +58,7 @@ struct R_DATA
 };
 #pragma pack(pop)
 
-//Pointers to resource record contents
+//Stas:Pointers to resource record contents, needs to go to h file.
 struct RES_RECORD
 {
 	unsigned char *name;
@@ -81,40 +66,35 @@ struct RES_RECORD
 	unsigned char *rdata;
 };
 
-//Structure of a Query
+//Stas:Structure of a Query, needs to go to h file
 typedef struct
 {
 	unsigned char *name;
 	struct QUESTION *ques;
 } QUERY;
-
+//Stas: need to move main to separate C file and add argv, argc.
 int main() 
 {
 	unsigned char hostname[100];
-
-	//RetrieveDnsServersFromRegistry(); // stas: delete it
-
 	WSADATA firstsock;
-	//printf("\nInitialising Winsock...");// stas: delete it
+	
 	if (WSAStartup(MAKEWORD(2, 2), &firstsock) != 0)
 	{
-		printf("Failed. Error Code : %d", WSAGetLastError());
+		printf("Failed. Error Code : %d", WSAGetLastError());// Stas: Elad, please change to to perror if needed.
 		return 1;
 	}
-	//printf("Initialised.");// stas: delete it
 	while (1) {
-		printf("\nEnter Hostname to Lookup : ");// stas: check the exact required syntax
-		gets((char*)hostname); // stas: replace gets with better func
+		printf("\nEnter Hostname to Lookup : ");// stas: Elad please check the exact required syntax
+		gets((char*)hostname); // stas: Elad, please replace gets with better func if have time.
 		if (strcmp(hostname, "quit") == 0)
 			break;
-			//return 0;
-		dnsQuery(hostname); //stas: change name to dns query
-		//getchar();
-		//Sleep(2); // 
+		//Stas: Elad, please add here input check and return the right error message.
+		dnsQuery(hostname); 
+		
 	}
-	//getchar(); // stas: replace
 	return 0;
 }
+// Stas: Need to add the definition to H file.
 void init_dns(struct DNS_HEADER *dns) {
 
 	dns->id = (unsigned short)htons(GetCurrentProcessId());
@@ -134,6 +114,8 @@ void init_dns(struct DNS_HEADER *dns) {
 	dns->add_count = 0;
 
 }
+
+
 void dnsQuery(unsigned char *host)
 {
 	unsigned char buf[65536], *qname, *reader;
@@ -172,33 +154,24 @@ void dnsQuery(unsigned char *host)
 	qinfo->qtype = htons(1); //we are requesting the ipv4 address
 	qinfo->qclass = htons(1); //stas: need to understand that
 
-	//printf("\nSending Packet...");
+	
 	//Stas: Need to Set here a 2 seconds time limit.explained here: https://www.lowtek.com/sockets/select.html
 	if (sendto(s, (char*)buf, sizeof(struct DNS_HEADER) + (strlen((const char*)qname) + 1) + sizeof(struct QUESTION), 0, (struct sockaddr*)&dest, sizeof(dest)) == SOCKET_ERROR)
 	{
-		printf("%d error", WSAGetLastError());//Stas: Elad, please change this to perror.
+		printf("%d error", WSAGetLastError());//Stas: Elad, please change this to perror if needed.
 	}
-	//printf("Sent");
-
 	i = sizeof(dest);
-	//printf("\nReceiving answer...");
+	
 	//Stas: Need to Set here a 2 seconds time limit. explained here: https://www.lowtek.com/sockets/select.html
 	if (recvfrom(s, (char*)buf, 65536, 0, (struct sockaddr*)&dest, &i) == SOCKET_ERROR)
 	{
-		printf("Failed. Error Code : %d", WSAGetLastError()); //Stas: Elad, please change this to perror.
+		printf("Failed. Error Code : %d", WSAGetLastError()); //Stas: Elad, please change this to perror if needed.
 	}
-	//printf("Received.");
-
+	
 	dns = (struct DNS_HEADER*)buf;
 	if (dns->rcode == 0) {
 		//move ahead of the dns header and the query field
 		reader = &buf[sizeof(struct DNS_HEADER) + (strlen((const char*)qname) + 1) + sizeof(struct QUESTION)]; // stas: move char pointer to the right place (which is?)
-
-	//	printf("\nThe response contains : ");
-	//	printf("\n %d Questions.", ntohs(dns->q_count)); //stas: convert dns type to int
-	//	printf("\n %d Answers.", ntohs(dns->ans_count));
-	//	printf("\n %d Authoritative Servers.", ntohs(dns->auth_count));
-	//	printf("\n %d Additional records.\n\n", ntohs(dns->add_count));
 
 		//reading answers
 		stop = 0;
@@ -230,99 +203,20 @@ void dnsQuery(unsigned char *host)
 			}
 
 		}
-		/*
-
-		//read authorities
-		for (i = 0; i < ntohs(dns->auth_count); i++)
-		{
-			auth[i].name = ReadName(reader, buf, &stop);
-			reader += stop;
-
-			auth[i].resource = (struct R_DATA*)(reader);
-			reader += sizeof(struct R_DATA);
-
-			auth[i].rdata = ReadName(reader, buf, &stop);
-			reader += stop;
-		}
-		*/
-		/*
-		//read additional
-		for (i = 0; i < ntohs(dns->add_count); i++)
-		{
-			addit[i].name = ReadName(reader, buf, &stop);
-			reader += stop;
-
-			addit[i].resource = (struct R_DATA*)(reader);
-			reader += sizeof(struct R_DATA);
-
-			if (ntohs(addit[i].resource->type) == 1)
-			{
-				addit[i].rdata = (unsigned char*)malloc(ntohs(addit[i].resource->data_len));
-				for (j = 0; j < ntohs(addit[i].resource->data_len); j++)
-					addit[i].rdata[j] = reader[j];
-
-				addit[i].rdata[ntohs(addit[i].resource->data_len)] = '\0';
-				reader += ntohs(addit[i].resource->data_len);
-
-			}
-			else
-			{
-				addit[i].rdata = ReadName(reader, buf, &stop);
-				reader += stop;
-			}
-		}
-		*/
-		//print answers
+		//print Ips
 		for (i = 0; i < ntohs(dns->ans_count); i++)
 		{
-			//printf("\nAnswer : %d",i+1);
-		//	printf("Name : %s ", answers[i].name);
-
 			if (ntohs(answers[i].resource->type) == 1) //IPv4 address
 			{
 				long *p;
 				p = (long*)answers[i].rdata;
 				a.sin_addr.s_addr = (*p); //working without ntohl
-				printf("has IPv4 address : %s", inet_ntoa(a.sin_addr));
+				printf("has IPv4 address : %s", inet_ntoa(a.sin_addr)); // Stas: Elad, please check the correct print format.
 			}
-			/*
-			if (ntohs(answers[i].resource->type) == 5) //Canonical name for an alias
-			{
-				printf("has alias name : %s", answers[i].rdata);
-			}
-			*/
 			printf("\n");
 		}
 
-		//print authorities
-		/*
-		for (i = 0; i < ntohs(dns->auth_count); i++)
-		{
-			//printf("\nAuthorities : %d",i+1);
-			printf("Name : %s ", auth[i].name);
-			if (ntohs(auth[i].resource->type) == 2)
-			{
-				printf("has authoritative nameserver : %s", auth[i].rdata);
-			}
-			printf("\n");
-		}
-		*/
-		//print additional resource records
-		/*
-		for (i = 0; i < ntohs(dns->add_count); i++)
-		{
-			//printf("\nAdditional : %d",i+1);
-			printf("Name : %s ", addit[i].name);
-			if (ntohs(addit[i].resource->type) == 1)
-			{
-				long *p;
-				p = (long*)addit[i].rdata;
-				a.sin_addr.s_addr = (*p); //working without ntohl
-				printf("has IPv4 address : %s", inet_ntoa(a.sin_addr));
-			}
-			printf("\n");
-		}
-		*/
+		
 	}
 	else if( dns->rcode == 1)
 	printf("\nFormat Erorr, try again!");
