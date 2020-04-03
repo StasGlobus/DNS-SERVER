@@ -173,19 +173,19 @@ void dnsQuery(unsigned char *host)
 	qinfo->qclass = htons(1); //stas: need to understand that
 
 	//printf("\nSending Packet...");
-	//Stas: Need to Set here a 2 seconds time limit.
+	//Stas: Need to Set here a 2 seconds time limit.explained here: https://www.lowtek.com/sockets/select.html
 	if (sendto(s, (char*)buf, sizeof(struct DNS_HEADER) + (strlen((const char*)qname) + 1) + sizeof(struct QUESTION), 0, (struct sockaddr*)&dest, sizeof(dest)) == SOCKET_ERROR)
 	{
-		printf("%d error", WSAGetLastError());
+		printf("%d error", WSAGetLastError());//Stas: Elad, please change this to perror.
 	}
 	//printf("Sent");
 
 	i = sizeof(dest);
 	//printf("\nReceiving answer...");
-	//Stas: Need to Set here a 2 seconds time limit.
+	//Stas: Need to Set here a 2 seconds time limit. explained here: https://www.lowtek.com/sockets/select.html
 	if (recvfrom(s, (char*)buf, 65536, 0, (struct sockaddr*)&dest, &i) == SOCKET_ERROR)
 	{
-		printf("Failed. Error Code : %d", WSAGetLastError());
+		printf("Failed. Error Code : %d", WSAGetLastError()); //Stas: Elad, please change this to perror.
 	}
 	//printf("Received.");
 
