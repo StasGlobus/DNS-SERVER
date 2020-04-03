@@ -201,9 +201,9 @@ void dnsQuery(unsigned char *host)
 				answers[i].rdata = ReadName(reader, buf, &stop);
 				reader = reader + stop;
 			}
-
+			//
 		}
-		//print Ips
+		//print IPs
 		for (i = 0; i < ntohs(dns->ans_count); i++)
 		{
 			if (ntohs(answers[i].resource->type) == 1) //IPv4 address
