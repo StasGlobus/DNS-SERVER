@@ -142,7 +142,7 @@ void dnsQuery(unsigned char *host, unsigned char *ip_dns)
 
 				reader = reader + ntohs(answers[i].resource->data_len);
 
-				//free(answers[i].rdata);
+				
 			}
 			else
 			{
@@ -150,7 +150,6 @@ void dnsQuery(unsigned char *host, unsigned char *ip_dns)
 				reader = reader + stop;
 
 			}
-			//
 			
 			
 		}
@@ -167,7 +166,7 @@ void dnsQuery(unsigned char *host, unsigned char *ip_dns)
 			}
 			printf("\n");
 		}
-		
+		//Stas: This functios FREES ALL MEMORRY.
 		for (i = 0; i < ntohs(dns->ans_count); i++) {
 			if (answers[i].rdata)
 				free(answers[i].rdata);
