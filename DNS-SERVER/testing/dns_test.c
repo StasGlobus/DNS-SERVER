@@ -73,11 +73,30 @@ typedef struct
 	struct QUESTION *ques;
 } QUERY;
 //Stas: need to move main to separate C file and add argv, argc.
-int main() 
+
+//Elad: Checks if hostname is valid
+int IsValid(char *name)
 {
-	unsigned char hostname[100];
+	int i, string_len;
+	string_len = strlen(name) - 1;
+
+	for (i = 0; i < string_len; i++)
+	{
+
+		if ((name[i] >= 'a' && name[i] <= 'z') || (name[i] >= 'A' && name[i] <= 'Z') || (name[i] >= '0' && name[i] <= '9') || (name[i] == '.') || (name[i] == '-'))
+			continue;
+		else
+			return 0;
+	}
+	return 1;
+}
+
+
+int main(int argc, char *argv[])
+{
+	unsigned char hostname[254];
 	WSADATA firstsock;
-	
+
 	if (WSAStartup(MAKEWORD(2, 2), &firstsock) != 0)
 	{
 		printf("Failed. Error Code : %d", WSAGetLastError());// Stas: Elad, please change to to perror if needed.
@@ -85,12 +104,18 @@ int main()
 	}
 	while (1) {
 		printf("\nEnter Hostname to Lookup : ");// stas: Elad please check the exact required syntax
-		gets((char*)hostname); // stas: Elad, please replace gets with better func if have time.
+		fgets(hostname, 254, stdin);
+		//replace th '\n' to '/0' instead
+		char *pos;
+		if ((pos = strchr(hostname, '\n')) != NULL)
+			*pos = '\0';
+		//
 		if (strcmp(hostname, "quit") == 0)
 			break;
-		//Stas: Elad, please add here input check and return the right error message.
-		dnsQuery(hostname); 
-		
+		if (IsValid(hostname))
+			dnsQuery(hostname, argv[1]);
+		else
+			printf("ERROR: BAD NAME\n");
 	}
 	return 0;
 }
@@ -116,7 +141,7 @@ void init_dns(struct DNS_HEADER *dns) {
 }
 
 
-void dnsQuery(unsigned char *host)
+void dnsQuery(unsigned char *host, unsigned char *ip_dns)
 {
 	unsigned char buf[65536], *qname, *reader;
 	int i, j, stop;
@@ -136,16 +161,16 @@ void dnsQuery(unsigned char *host)
 	dest.sin_family = AF_INET;
 	dest.sin_port = htons(53);
 
-	dest.sin_addr.s_addr = inet_addr("192.168.1.1"); // stas: change it to argv input instead
+	dest.sin_addr.s_addr = inet_addr(ip_dns); // stas: change it to argv input instead
 
 	//Set the DNS structure to standard queries
 	dns = (struct DNS_HEADER *)&buf; // Stas: check the syntax here.
 	//Stas: Fills the DNS QUERY structure.
 	init_dns(dns);
-	
+
 	//point to the query portion
 	qname = (unsigned char*)&buf[sizeof(struct DNS_HEADER)];
-	
+
 	//this will convert www.google.com to 3www6google3com ;
 	string2_dns_format(qname, host);
 
@@ -154,20 +179,20 @@ void dnsQuery(unsigned char *host)
 	qinfo->qtype = htons(1); //we are requesting the ipv4 address
 	qinfo->qclass = htons(1); //stas: need to understand that
 
-	
+
 	//Stas: Need to Set here a 2 seconds time limit.explained here: https://www.lowtek.com/sockets/select.html
 	if (sendto(s, (char*)buf, sizeof(struct DNS_HEADER) + (strlen((const char*)qname) + 1) + sizeof(struct QUESTION), 0, (struct sockaddr*)&dest, sizeof(dest)) == SOCKET_ERROR)
 	{
 		printf("%d error", WSAGetLastError());//Stas: Elad, please change this to perror if needed.
 	}
 	i = sizeof(dest);
-	
+
 	//Stas: Need to Set here a 2 seconds time limit. explained here: https://www.lowtek.com/sockets/select.html
 	if (recvfrom(s, (char*)buf, 65536, 0, (struct sockaddr*)&dest, &i) == SOCKET_ERROR)
 	{
 		printf("Failed. Error Code : %d", WSAGetLastError()); //Stas: Elad, please change this to perror if needed.
 	}
-	
+
 	dns = (struct DNS_HEADER*)buf;
 	if (dns->rcode == 0) {
 		//move ahead of the dns header and the query field
@@ -216,19 +241,19 @@ void dnsQuery(unsigned char *host)
 			printf("\n");
 		}
 
-		
+
 	}
 	//Stas: Elad, please check the correct format for printing.
-	else if(dns->rcode == 1)
-	printf("\nFormat Erorr, try again!");
+	else if (dns->rcode == 1)
+		printf("\nFormat Erorr, try again!");
 	else if (dns->rcode == 2)
-	printf("\nName Server Erorr, try again!");
+		printf("\nERROR: SERVER FAILURE");
 	else if (dns->rcode == 3)
-	printf("\nName  Erorr, try again!");
-	else if (dns->rcode ==4)
-	printf("\nNot Implemented Erorr, try again!");
+		printf("\nERROR: NONEXISTENT");
+	else if (dns->rcode == 4)
+		printf("\nERROR: NOT IMPLEMNTED");
 	else if (dns->rcode == 5)
-	printf("\n Refused Erorr, try again!");
+		printf("\nERROR: REFUSED");
 
 	return;
 }
@@ -304,9 +329,8 @@ void string2_dns_format(unsigned char* dns, unsigned char* host)
 			{
 				*dns++ = host[lock];
 			}
-			lock++; 
+			lock++;
 		}
 	}
 	*dns++ = '\0';
-
 }
