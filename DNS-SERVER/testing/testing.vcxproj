@@ -116,7 +116,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="dns_test.c" />
+    <ClCompile Include="main.c" />
+    <ClCompile Include="nsclient.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="nsclient.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
