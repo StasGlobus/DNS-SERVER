@@ -103,7 +103,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 	while (1) {
-		printf("\nEnter Hostname to Lookup : ");// stas: Elad please check the exact required syntax
+		printf("\n>");// stas: Elad please check the exact required syntax
 		fgets(hostname, 254, stdin);
 		//replace th '\n' to '/0' instead
 		char *pos;
@@ -188,11 +188,27 @@ void dnsQuery(unsigned char *host, unsigned char *ip_dns)
 	i = sizeof(dest);
 
 	//Stas: Need to Set here a 2 seconds time limit. explained here: https://www.lowtek.com/sockets/select.html
-	if (recvfrom(s, (char*)buf, 65536, 0, (struct sockaddr*)&dest, &i) == SOCKET_ERROR)
-	{
-		printf("Failed. Error Code : %d", WSAGetLastError()); //Stas: Elad, please change this to perror if needed.
-	}
+	fd_set readfds;
+	//fcntl(sd, F_SETFL, O_NONBLOCK);
+	struct timeval tv;
+	//while (1) {
 
+		FD_ZERO(&readfds);
+		FD_SET(s, &readfds);
+
+		tv.tv_sec = 2;
+		tv.tv_usec = 0;
+
+		int rv = select(s + 1, &readfds, NULL, NULL, &tv);
+		if (rv == 1) {
+
+			if (recvfrom(s, (char*)buf, 65536, 0, (struct sockaddr*)&dest, &i) == SOCKET_ERROR)
+			{
+				printf("Failed. Error Code : %d", WSAGetLastError()); //Stas: Elad, please change this to perror if needed.
+			}
+		}
+		else printf("Failed. To much Time.");
+	//}
 	dns = (struct DNS_HEADER*)buf;
 	if (dns->rcode == 0) {
 		//move ahead of the dns header and the query field
@@ -236,7 +252,7 @@ void dnsQuery(unsigned char *host, unsigned char *ip_dns)
 				long *p;
 				p = (long*)answers[i].rdata;
 				a.sin_addr.s_addr = (*p); //working without ntohl
-				printf("has IPv4 address : %s", inet_ntoa(a.sin_addr)); // Stas: Elad, please check the correct print format.
+				printf("%s", inet_ntoa(a.sin_addr)); // Stas: Elad, please check the correct print format.
 			}
 			printf("\n");
 		}
